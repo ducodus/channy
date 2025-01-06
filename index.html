@@ -1,70 +1,325 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 웹페이지</title>
+    <title>Tetris Game</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .section {
-            margin-bottom: 40px;
-        }
-        h1 {
-            color: #4CAF50;
-        }
-        iframe {
-            margin: 10px;
-            border: 1px solid #ccc;
-        }
-        .youtube-container {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            margin-top: 20px;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: #fff;
+        }
+        .game-info {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #game-over-text {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: red;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
-
-    <!-- 급식 정보 -->
-    <div class="section" id="meal-info">
-        <h1>학교 급식 정보</h1>
-        <p>오늘의 급식 정보를 보려면 아래 링크를 클릭하세요:</p>
-        <a href="https://seongho-m.goehs.kr/seongho-m/ad/fm/foodmenu/selectFoodMenuView.do?mi=12534" 
-           target="_blank" 
-           style="color: #007BFF; text-decoration: underline;">
-           급식 정보 페이지로 이동하기
-        </a>
-    </div>
-
-    <!-- 구글 검색창 -->
-    <div class="section" id="search">
-        <h1>구글 검색창</h1>
-        <form action="https://www.google.com/search" method="get" target="_blank">
-            <input type="text" name="q" placeholder="검색어를 입력하세요" style="width: 80%; padding: 10px;">
-            <button type="submit" style="padding: 10px;">검색</button>
-        </form>
-    </div>
-
-    <!-- 유튜브 영상 -->
-    <div class="section" id="youtube">
-        <h1>내가 좋아하는 유튜브</h1>
-        <div class="youtube-container">
-            <iframe 
-                src="https://www.youtube.com/embed/75kySTFaBQQ" 
-                width="300" 
-                height="200" 
-                allowfullscreen>
-            </iframe>
-            <iframe 
-                src="https://www.youtube.com/embed/vVUE7gkUCNw" 
-                width="300" 
-                height="200" 
-                allowfullscreen>
-            </iframe>
+    <div id="game-container">
+        <canvas id="tetris" width="240" height="400"></canvas>
+        <div class="game-info">
+            <p>Score: <span id="score">0</span></p>
+            <button id="start-btn">Start Game</button>
+            <p>Controls: ←↓→ to move, Z to rotate</p>
+            <p id="game-over-text">Game Over! Press SPACE to restart</p>
         </div>
     </div>
 
+    <script>
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
+        const gameOverText = document.getElementById('game-over-text');
+        const BLOCK_SIZE = 20;
+        const COLS = 12;
+        const ROWS = 20;
+        let score = 0;
+        let gameLoop;
+        let dropCounter = 0;
+        let lastTime = 0;
+
+        // 테트로미노 모양 정의
+        const PIECES = [
+            [
+                [1, 1, 1, 1]
+            ],
+            [
+                [1, 1],
+                [1, 1]
+            ],
+            [
+                [0, 1, 0],
+                [1, 1, 1]
+            ],
+            [
+                [1, 0],
+                [1, 0],
+                [1, 1]
+            ],
+            [
+                [0, 1],
+                [0, 1],
+                [1, 1]
+            ],
+            [
+                [1, 1, 0],
+                [0, 1, 1]
+            ],
+            [
+                [0, 1, 1],
+                [1, 1, 0]
+            ]
+        ];
+
+        // 게임 상태
+        const gameState = {
+            piece: null,
+            position: {x: 0, y: 0},
+            grid: Array(ROWS).fill().map(() => Array(COLS).fill(0)),
+            isPlaying: false,
+            isGameOver: false
+        };
+
+        // 새로운 피스 생성
+        function createPiece() {
+            const piece = PIECES[Math.floor(Math.random() * PIECES.length)];
+            gameState.piece = piece;
+            gameState.position.y = 0;
+            gameState.position.x = Math.floor((COLS - piece[0].length) / 2);
+            
+            if (checkCollision()) {
+                gameOver();
+            }
+        }
+
+        // 충돌 체크
+        function checkCollision() {
+            for (let y = 0; y < gameState.piece.length; y++) {
+                for (let x = 0; x < gameState.piece[y].length; x++) {
+                    if (gameState.piece[y][x] !== 0) {
+                        const newX = gameState.position.x + x;
+                        const newY = gameState.position.y + y;
+                        
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+                        
+                        if (newY >= 0 && gameState.grid[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 피스 회전
+        function rotatePiece() {
+            const rotated = [];
+            for (let i = 0; i < gameState.piece[0].length; i++) {
+                const row = [];
+                for (let j = gameState.piece.length - 1; j >= 0; j--) {
+                    row.push(gameState.piece[j][i]);
+                }
+                rotated.push(row);
+            }
+            
+            const original = gameState.piece;
+            gameState.piece = rotated;
+            
+            if (checkCollision()) {
+                gameState.piece = original;
+            }
+        }
+
+        // 피스 고정
+        function mergePiece() {
+            for (let y = 0; y < gameState.piece.length; y++) {
+                for (let x = 0; x < gameState.piece[y].length; x++) {
+                    if (gameState.piece[y][x]) {
+                        gameState.grid[gameState.position.y + y][gameState.position.x + x] = 1;
+                    }
+                }
+            }
+        }
+
+        // 줄 제거 체크
+        function checkLines() {
+            let linesCleared = 0;
+            
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (gameState.grid[y].every(cell => cell === 1)) {
+                    gameState.grid.splice(y, 1);
+                    gameState.grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    y++;
+                }
+            }
+            
+            if (linesCleared > 0) {
+                score += linesCleared * 100;
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        // 게임 오버
+        function gameOver() {
+            gameState.isPlaying = false;
+            gameState.isGameOver = true;
+            clearInterval(gameLoop);
+            gameOverText.style.display = 'block';
+        }
+
+        // 게임 재시작
+        function restartGame() {
+            if (gameState.isGameOver) {
+                gameState.isGameOver = false;
+                gameState.isPlaying = true;
+                gameState.grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+                score = 0;
+                document.getElementById('score').textContent = '0';
+                gameOverText.style.display = 'none';
+                createPiece();
+                update();
+            }
+        }
+
+        // 피스 드롭
+        function dropPiece() {
+            gameState.position.y++;
+            if (checkCollision()) {
+                gameState.position.y--;
+                mergePiece();
+                checkLines();
+                createPiece();
+            }
+        }
+
+        // 게임 렌더링
+        function render() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 그리드 그리기
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (gameState.grid[y][x]) {
+                        context.fillStyle = '#000';
+                        context.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                }
+            }
+            
+            // 현재 피스 그리기
+            if (gameState.piece) {
+                for (let y = 0; y < gameState.piece.length; y++) {
+                    for (let x = 0; x < gameState.piece[y].length; x++) {
+                        if (gameState.piece[y][x]) {
+                            context.fillStyle = '#F00';
+                            context.fillRect(
+                                (gameState.position.x + x) * BLOCK_SIZE,
+                                (gameState.position.y + y) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // 게임 업데이트
+        function update(time = 0) {
+            if (!gameState.isPlaying) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > 1000) {
+                dropPiece();
+                dropCounter = 0;
+            }
+
+            render();
+            requestAnimationFrame(update);
+        }
+
+        // 키보드 컨트롤
+        document.addEventListener('keydown', event => {
+            if (gameState.isGameOver && event.code === 'Space') {
+                restartGame();
+                return;
+            }
+
+            if (!gameState.isPlaying) return;
+
+            switch (event.code) {
+                case 'ArrowLeft':
+                    gameState.position.x--;
+                    if (checkCollision()) {
+                        gameState.position.x++;
+                    }
+                    break;
+                case 'ArrowRight':
+                    gameState.position.x++;
+                    if (checkCollision()) {
+                        gameState.position.x--;
+                    }
+                    break;
+                case 'ArrowDown':
+                    dropPiece();
+                    break;
+                case 'KeyZ':
+                    rotatePiece();
+                    break;
+            }
+        });
+
+        // 게임 시작
+        document.getElementById('start-btn').addEventListener('click', () => {
+            if (!gameState.isPlaying && !gameState.isGameOver) {
+                gameState.isPlaying = true;
+                gameState.grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+                score = 0;
+                document.getElementById('score').textContent = '0';
+                createPiece();
+                update();
+            }
+        });
+    </script>
 </body>
 </html>
