@@ -3,113 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>가상 채팅 AI</title>
+    <title>숫자 맞추기 AI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+            text-align: center;
             background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
         }
         h1 {
-            margin-bottom: 20px;
             color: #333;
         }
-        #chatbox {
-            width: 80%;
-            max-width: 600px;
-            height: 400px;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            overflow-y: auto;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .message {
-            margin: 5px 0;
-            padding: 10px;
-            border-radius: 10px;
-        }
-        .user {
-            background-color: #d1e7ff;
-            text-align: right;
-        }
-        .ai {
-            background-color: #ffeeba;
-            text-align: left;
-        }
-        #input-area {
-            display: flex;
-            width: 80%;
-            max-width: 600px;
-        }
-        #input-area input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        #input-area button {
-            padding: 10px;
+        button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
             background-color: #007bff;
-            color: #fff;
+            color: white;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
         }
-        #input-area button:hover {
+        button:hover {
             background-color: #0056b3;
+        }
+        #message {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #555;
         }
     </style>
 </head>
 <body>
-    <h1>가상 채팅 AI</h1>
-    <div id="chatbox"></div>
-    <div id="input-area">
-        <input type="text" id="userInput" placeholder="질문을 입력하세요" />
-        <button onclick="sendMessage()">보내기</button>
-    </div>
+    <h1>숫자 맞추기 AI</h1>
+    <p>1부터 100까지의 숫자 중 하나를 마음속으로 생각하세요!</p>
+    <p id="message">내가 생각한 숫자는...</p>
+    <button onclick="handleAnswer('higher')">더 큽니다</button>
+    <button onclick="handleAnswer('lower')">더 작습니다</button>
+    <button onclick="handleAnswer('correct')">정답입니다!</button>
 
     <script>
-        const chatbox = document.getElementById("chatbox");
+        // 숫자 범위와 초기값
+        let min = 1;
+        let max = 100;
+        let guess = Math.floor((min + max) / 2);
 
-        // 간단한 규칙 기반 AI 응답
-        const responses = {
-            "안녕": "안녕하세요! 어떻게 도와드릴까요?",
-            "오늘 날씨 어때?": "저는 인공지능이라 날씨를 직접 알 수는 없지만, 맑은 날이길 바랄게요!",
-            "좋아하는 음식은?": "저는 데이터만 먹는답니다! 😊",
-            "인공지능이 뭐야?": "인공지능은 사람처럼 학습하고 사고할 수 있는 기술이에요.",
-            "잘 가": "안녕히 가세요! 또 찾아주세요."
-        };
+        const messageElement = document.getElementById('message');
 
-        function sendMessage() {
-            const userInput = document.getElementById("userInput").value.trim();
-            if (userInput === "") return;
-
-            // 사용자 메시지 추가
-            addMessage(userInput, "user");
-
-            // AI 응답 처리
-            const aiResponse = responses[userInput] || "죄송해요, 잘 이해하지 못했어요. 😢";
-            setTimeout(() => addMessage(aiResponse, "ai"), 500); // AI 응답 딜레이
-
-            // 입력창 비우기
-            document.getElementById("userInput").value = "";
+        // 메시지 업데이트
+        function updateMessage() {
+            messageElement.textContent = `내가 생각한 숫자는 ${guess}인가요?`;
         }
 
-        function addMessage(text, type) {
-            const message = document.createElement("div");
-            message.className = `message ${type}`;
-            message.textContent = text;
-            chatbox.appendChild(message);
-            chatbox.scrollTop = chatbox.scrollHeight; // 스크롤 하단으로 이동
+        // 답변 처리
+        function handleAnswer(answer) {
+            if (answer === 'higher') {
+                min = guess + 1;
+            } else if (answer === 'lower') {
+                max = guess - 1;
+            } else if (answer === 'correct') {
+                messageElement.textContent = `정답입니다! 숫자는 ${guess}입니다! 🎉`;
+                disableButtons();
+                return;
+            }
+
+            // 다음 추측값 계산
+            guess = Math.floor((min + max) / 2);
+            updateMessage();
         }
+
+        // 버튼 비활성화
+        function disableButtons() {
+            document.querySelectorAll('button').forEach(button => button.disabled = true);
+        }
+
+        // 초기 메시지 설정
+        updateMessage();
     </script>
 </body>
 </html>
