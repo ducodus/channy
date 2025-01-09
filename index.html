@@ -3,133 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>미로 탈출 게임</title>
+    <title>클릭 게임</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-        }
-        canvas {
-            display: block;
-            margin: 20px auto;
             background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #score {
+            font-size: 36px;
+            color: #4CAF50;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>미로 탈출 게임</h1>
-    <p>화살표 키로 미로를 탈출하세요! 장애물에 부딪히면 마이크로비트가 반짝입니다.</p>
-    <button id="connect">마이크로비트 연결</button>
-    <canvas id="maze" width="500" height="500"></canvas>
+    <h1>클릭 게임</h1>
+    <p>제한 시간 10초 동안 버튼을 클릭해 보세요!</p>
+    <button id="clickButton">클릭!</button>
+    <p id="score">점수: 0</p>
 
     <script>
-        const canvas = document.getElementById('maze');
-        const ctx = canvas.getContext('2d');
-        const connectButton = document.getElementById('connect');
+        const button = document.getElementById('clickButton');
+        const scoreDisplay = document.getElementById('score');
+        let score = 0;
 
-        const tileSize = 50;
-        const rows = 10;
-        const cols = 10;
-
-        const player = {
-            x: 0,
-            y: 0,
-            color: 'blue',
-        };
-
-        const maze = [
-            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 0, 1, 0, 0, 0, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1, 0, 0, 1, 0],
-            [0, 1, 1, 1, 0, 1, 0, 1, 1, 0],
-            [0, 0, 0, 0, 0, 1, 0, 1, 0, 0],
-            [0, 1, 1, 1, 1, 1, 0, 1, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ];
-
-        let bluetoothDevice;
-        let bluetoothCharacteristic;
-
-        // 미로 그리기
-        function drawMaze() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let y = 0; y < rows; y++) {
-                for (let x = 0; x < cols; x++) {
-                    if (maze[y][x] === 1) {
-                        ctx.fillStyle = 'black';
-                        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-                    }
-                }
-            }
-
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
-        }
-
-        function movePlayer(dx, dy) {
-            const newX = player.x + dx;
-            const newY = player.y + dy;
-
-            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
-                if (maze[newY][newX] === 1) {
-                    // 장애물에 부딪혔을 때
-                    alert("장애물에 부딪혔습니다!");
-                    sendSignalToMicrobit(); // 마이크로비트로 신호 전송
-                } else {
-                    player.x = newX;
-                    player.y = newY;
-                }
-            }
-
-            drawMaze();
-
-            if (player.x === cols - 1 && player.y === rows - 1) {
-                alert("축하합니다! 미로를 탈출했습니다!");
-            }
-        }
-
-        // 마이크로비트와 Bluetooth 연결
-        async function connectToMicrobit() {
-            try {
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb'] // 마이크로비트의 UART 서비스 UUID
-                });
-
-                const server = await bluetoothDevice.gatt.connect();
-                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-                bluetoothCharacteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-
-                alert("마이크로비트에 연결되었습니다!");
-            } catch (error) {
-                console.error("Bluetooth 연결 실패:", error);
-            }
-        }
-
-        // 마이크로비트로 신호 전송
-        async function sendSignalToMicrobit() {
-            if (bluetoothCharacteristic) {
-                const signal = new TextEncoder().encode("1");
-                await bluetoothCharacteristic.writeValue(signal);
-            } else {
-                console.error("마이크로비트가 연결되지 않았습니다!");
-            }
-        }
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowUp') movePlayer(0, -1);
-            if (event.key === 'ArrowDown') movePlayer(0, 1);
-            if (event.key === 'ArrowLeft') movePlayer(-1, 0);
-            if (event.key === 'ArrowRight') movePlayer(1, 0);
+        button.addEventListener('click', () => {
+            score++;
+            scoreDisplay.textContent = `점수: ${score}`;
         });
 
-        connectButton.addEventListener('click', connectToMicrobit);
-
-        drawMaze();
+        setTimeout(() => {
+            button.disabled = true;
+            alert(`게임 종료! 최종 점수: ${score}`);
+        }, 10000); // 10초 후 버튼 비활성화
     </script>
 </body>
 </html>
